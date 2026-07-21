@@ -5,6 +5,10 @@
 #include "TxtDataHelpers.h"
 #include <RTClib.h>
 
+#if defined(RAK_EXTERNAL_BATTERY_SENSE) && RAK_EXTERNAL_BATTERY_SENSE
+  #include <helpers/ExternalBatterySense.h>
+#endif
+
 #ifndef BRIDGE_MAX_BAUD
 #define BRIDGE_MAX_BAUD 115200
 #endif
@@ -92,6 +96,18 @@ void CommonCLI::loadPrefsInt(FILESYSTEM* fs, const char* filename) {
     file.read((uint8_t *)&_prefs->flood_max_unscoped, sizeof(_prefs->flood_max_unscoped));   // 291
     file.read((uint8_t *)&_prefs->flood_max_advert, sizeof(_prefs->flood_max_advert));       // 292
     // next: 293
+    file.read(pad, 1);                                                                                 // 293 : pad for cal_q alignment
+    file.read((uint8_t *)&_prefs->ext_batt_cal_q, sizeof(_prefs->ext_batt_cal_q));                     // 294
+    file.read(pad, 1);                                                                                 // 296 : pad to even byte boundary
+    // next: 297
+
+    // Push the WB_A1 external-divider runtime calibration into the helper.
+    // Files written by older firmware end at offset 292 so the read above
+    // comes back zero, which the helper treats as "use compile-time default"
+    // (i.e. fall back to -D RAK_EXTERNAL_BATTERY_CALIBRATION_Q).
+#if defined(RAK_EXTERNAL_BATTERY_SENSE) && RAK_EXTERNAL_BATTERY_SENSE
+    rakExternalBatterySetCalibration(_prefs->ext_batt_cal_q);
+#endif
 
     // sanitise bad pref values
     _prefs->rx_delay_base = constrain(_prefs->rx_delay_base, 0, 20.0f);
@@ -185,6 +201,10 @@ void CommonCLI::savePrefs(FILESYSTEM* fs) {
     file.write((uint8_t *)&_prefs->flood_max_unscoped, sizeof(_prefs->flood_max_unscoped));   // 291
     file.write((uint8_t *)&_prefs->flood_max_advert, sizeof(_prefs->flood_max_advert));       // 292
     // next: 293
+    file.write(pad, 1);                                                                                 // 293
+    file.write((uint8_t *)&_prefs->ext_batt_cal_q, sizeof(_prefs->ext_batt_cal_q));                     // 294
+    file.write(pad, 1);                                                                                 // 296
+    // next: 297
 
     file.close();
   }
@@ -759,6 +779,24 @@ void CommonCLI::handleSetCmd(uint32_t sender_timestamp, char* command, char* rep
       _prefs->adc_multiplier = 0.0f;
       strcpy(reply, "Error: unsupported by this board");
     };
+#if defined(RAK_EXTERNAL_BATTERY_SENSE) && RAK_EXTERNAL_BATTERY_SENSE
+  } else if (memcmp(config, "ext.batt.cal ", 13) == 0) {
+    uint32_t q = _atoi(&config[13]);
+    if (q != 0UL && q > 65535UL) {
+      strcpy(reply, "Error: cal must be 0 (default) or 1..65535");
+    } else {
+      _prefs->ext_batt_cal_q = (uint16_t)q;
+      rakExternalBatterySetCalibration(_prefs->ext_batt_cal_q);
+      savePrefs();
+      if (_prefs->ext_batt_cal_q == 0) {
+        strcpy(reply, "OK - cal reset to compile-time default (1000)");
+      } else {
+        sprintf(reply, "OK - cal set to %u (%.3f)",
+          (unsigned)_prefs->ext_batt_cal_q,
+          (double)_prefs->ext_batt_cal_q / 1000.0);
+      }
+    }
+#endif
   } else {
     strcpy(reply, "unknown config: ");
     StrHelper::strncpy(&reply[16], config, 160-17);
@@ -899,6 +937,18 @@ void CommonCLI::handleGetCmd(uint32_t sender_timestamp, char* command, char* rep
     } else {
       sprintf(reply, "> %.3f", adc_mult);
     }
+#if defined(RAK_EXTERNAL_BATTERY_SENSE) && RAK_EXTERNAL_BATTERY_SENSE
+  } else if (memcmp(config, "ext.batt", 8) == 0 &&
+             (config[8] == 0 || config[8] == ' ')) {
+    uint16_t cal = _prefs->ext_batt_cal_q;
+    if (cal == 0) cal = (uint16_t)RAK_EXTERNAL_BATTERY_CALIBRATION_Q;
+    sprintf(reply, "> cal=%u (%.3f)", (unsigned)cal, (double)cal / 1000.0);
+  } else if (memcmp(config, "ext.batt.cal", 12) == 0 &&
+             (config[12] == 0 || config[12] == ' ')) {
+    uint16_t cal = _prefs->ext_batt_cal_q;
+    if (cal == 0) cal = (uint16_t)RAK_EXTERNAL_BATTERY_CALIBRATION_Q;
+    sprintf(reply, "> %u (%.3f)", (unsigned)cal, (double)cal / 1000.0);
+#endif
   // Power management commands
   } else if (memcmp(config, "pwrmgt.support", 14) == 0) {
 #ifdef NRF52_POWER_MANAGEMENT

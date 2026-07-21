@@ -1,0 +1,26 @@
+# WB_A1 custom firmware build matrix
+#
+# This file is the single source of truth for the GitHub Actions build
+# matrix that produces all custom RAK WB_A1 firmware artifacts. Edit
+# this list whenever a new compatible RAK board or firmware role is
+# added to the fork. Each line is one PlatformIO environment name.
+#
+# Selection criteria: nRF52 RAK WisBlock-class board whose variant.h
+# exposes WB_A1 (pin 31) as an ADC-capable analog input, with no
+# blocking conflict from on-board radio, GPS, display, flash, or
+# power-enable pins. Currently RAK3401 and RAK4631.
+#
+# The build matrix fails if any of these envs is removed or renamed
+# without an update here.
+RAK_3401_repeater_wb_a1
+RAK_3401_room_server_wb_a1
+RAK_3401_companion_radio_usb_wb_a1
+RAK_3401_companion_radio_ble_wb_a1
+RAK_3401_terminal_chat_wb_a1
+RAK_3401_sensor_wb_a1
+RAK_4631_repeater_wb_a1
+RAK_4631_room_server_wb_a1
+RAK_4631_companion_radio_usb_wb_a1
+RAK_4631_companion_radio_ble_wb_a1
+RAK_4631_terminal_chat_wb_a1
+RAK_4631_sensor_wb_a1

@@ -63,6 +63,9 @@ struct NodePrefs { // persisted to file
   uint8_t rx_boosted_gain; // power settings
   uint8_t path_hash_mode;   // which path mode to use when sending
   uint8_t loop_detect;
+  // WB_A1 external-divider runtime calibration. 0 means "use compile-time
+  // default" (the seeded value from -D RAK_EXTERNAL_BATTERY_CALIBRATION_Q).
+  uint16_t ext_batt_cal_q;     // Q-format, 1000 = 1.000
 };
 
 class CommonCLICallbacks {

@@ -68,6 +68,14 @@ extern "C"
 #define PIN_A6 (0xff)
 #define PIN_A7 (0xff)
 
+// WisBlock IO_SLOT analog input. PIN_A1 / PIN_A5 already expose this
+// pin (P0.31 = AIN7) but upstream did not give it the canonical
+// `WB_A1` name. The fork adds the alias so the optional external
+// battery-sense feature can use the same symbol on RAK3401 and RAK4631.
+#ifndef WB_A1
+  #define WB_A1 (31)
+#endif
+
 	static const uint8_t A0 = PIN_A0;
 	static const uint8_t A1 = PIN_A1;
 	static const uint8_t A2 = PIN_A2;

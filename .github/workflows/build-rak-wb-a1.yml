@@ -5,6 +5,14 @@ name: Build RAK WB_A1 Firmware
 #           GitHub Actions way to trigger on a tag push; there is no
 #           standalone "tags" trigger in the schema, only push.tags filters)
 #   - workflow_dispatch: manual "Run workflow" button for ad-hoc builds
+#
+# Tag / version convention: releases are named after the UPSTREAM
+# MeshCore release this fork is based on, with a -WB_A1 suffix (plus an
+# optional prerelease qualifier). Example: upstream v1.16.0 ->
+#   v1.16.0-WB_A1          (stable fork build)
+#   v1.16.0-WB_A1-beta.1   (prerelease fork build)
+# The leading "v" is stripped below to form FIRMWARE_VERSION, so
+# artifacts come out as e.g. RAK_4631_repeater_wb_a1-1.16.0-WB_A1-beta.1-<sha>.uf2
 on:
   push:
     tags:
@@ -198,6 +206,8 @@ jobs:
           # can see it. GH's public /releases API excludes drafts even with
           # auth tokens; only the GH web UI surfaces them.
           draft: false
+          # beta/alpha/rc tags are published as prereleases
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-rc') }}
           fail_on_unmatched_files: true
           generate_release_notes: false
           files: |
